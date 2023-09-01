@@ -96,44 +96,22 @@ class InlineMultistateSDFG(transformation.SingleStateTransformation):
                 # if nested_sdfg in state.predecessors(nested_sdfg):
                 #     if state.in_degree(node) > 0:
                 #         return False
-                found = False
+
                 for e in state.out_edges(node):
                     if e.dst is not nested_sdfg:
                         return False
                     if state.in_degree(node) > 0:
                         return False
-                    # Only accept full ranges for now. TODO(later): Improve
-                    if e.data.subset != subsets.Range.from_array(sdfg.arrays[node.data]):
-                        return False
-                    if e.dst_conn in nested_sdfg.sdfg.arrays:
-                        # Do not accept views. TODO(later): Improve
-                        outer_desc = sdfg.arrays[node.data]
-                        inner_desc = nested_sdfg.sdfg.arrays[e.dst_conn]
-                        if (outer_desc.shape != inner_desc.shape or outer_desc.strides != inner_desc.strides):
-                            return False
-                    found = True
 
                 for e in state.in_edges(node):
                     if e.src is not nested_sdfg:
                         return False
                     if state.out_degree(node) > 0:
                         return False
-                    # Only accept full ranges for now. TODO(later): Improve
-                    if e.data.subset != subsets.Range.from_array(sdfg.arrays[node.data]):
-                        return False
-                    if e.src_conn in nested_sdfg.sdfg.arrays:
-                        # Do not accept views. TODO(later): Improve
-                        outer_desc = sdfg.arrays[node.data]
-                        inner_desc = nested_sdfg.sdfg.arrays[e.src_conn]
-                        if (outer_desc.shape != inner_desc.shape or outer_desc.strides != inner_desc.strides):
-                            return False
-                    found = True
 
                 # elif nested_sdfg in state.successors(nested_sdfg):
                 #     if state.out_degree(node) > 0:
                 #         return False
-                if not found:
-                    return False
             else:
                 return False
 
@@ -391,22 +369,22 @@ class InlineMultistateSDFG(transformation.SingleStateTransformation):
         #                           False)
 
         # Modify all other internal edges pertaining to input/output nodes
-        # for nstate in nsdfg.nodes():
-        #     for node in nstate.nodes():
-        #         if isinstance(node, nodes.AccessNode):
-        #             if node.data in input_set or node.data in output_set:
-        #                 if node.data in input_set:
-        #                     outer_edge = inputs[input_set[node.data]]
-        #                 else:
-        #                     outer_edge = outputs[output_set[node.data]]
+        for nstate in nsdfg.nodes():
+            for node in nstate.nodes():
+                if isinstance(node, nodes.AccessNode):
+                    if node.data not in input_set and node.data not in output_set:
+                        continue
 
-        #                 for edge in state.all_edges(node):
-        #                     if (edge not in modified_edges
-        #                             and edge.data.data == node.data):
-        #                         for e in state.memlet_tree(edge):
-        #                             if e.data.data == node.data:
-        #                                 e._data = helpers.unsqueeze_memlet(
-        #                                     e.data, outer_edge.data)
+                    if node.data in input_set:
+                        outer_edge = inputs[input_set[node.data]]
+                    if node.data in output_set:
+                        outer_edge = outputs[output_set[node.data]]
+
+                    for edge in nstate.edges():
+                        if edge.data.data != node.data:
+                            continue
+
+                        edge._data = helpers.unsqueeze_memlet(edge.data, outer_edge.data)
 
         # Replace nested SDFG parents with new SDFG
         for nstate in nsdfg.nodes():

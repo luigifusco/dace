@@ -272,5 +272,7 @@ class TaskletFusion(pm.SingleStateTransformation):
         graph.remove_node(t1)
         if data is not None:
             graph.remove_node(data)
-            sdfg.remove_data(data.data, True)
+
         graph.remove_node(t2)
+
+        sdfg.validate()

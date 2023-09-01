@@ -110,6 +110,12 @@ class MapFission(transformation.SingleStateTransformation):
         map_node = self.map_entry
         nsdfg_node = None
 
+        if expr_index == 1:
+            return False
+
+        if map_node.label == "stateCLOUDSC_map":
+            return False
+
         # If the map is dynamic-ranged, the resulting border arrays would be
         # dynamically sized
         if sd.has_dynamic_map_inputs(graph, map_node):
@@ -222,11 +228,11 @@ class MapFission(transformation.SingleStateTransformation):
                     nsdfg_node.sdfg.symbols[symname] = graph.symbols_defined_at(nsdfg_node)[symname]
 
             # Remove map symbols from nested mapping
-            for name in outer_map.params:
-                if str(name) in nsdfg_node.symbol_mapping:
-                    del nsdfg_node.symbol_mapping[str(name)]
-                if str(name) in nsdfg_node.sdfg.symbols:
-                    del nsdfg_node.sdfg.symbols[str(name)]
+            # for name in outer_map.params:
+            #     if str(name) in nsdfg_node.symbol_mapping:
+            #         del nsdfg_node.symbol_mapping[str(name)]
+            #     if str(name) in nsdfg_node.sdfg.symbols:
+            #         del nsdfg_node.sdfg.symbols[str(name)]
             
             # TODO: This was an attempt to fix an issue with MapFission and symbols in the NestedSDFG's symbol mapping
             # depending on other symbols and the Map's parameters. Disabled for now until the issue is clarified.
@@ -650,7 +656,7 @@ class MapFission(transformation.SingleStateTransformation):
                     if len(path) > 1:
                         outer_edge = path[1]
                         dst_subset = outer_edge.data.get_dst_subset(outer_edge, graph)
-                        src_subset = full_memlet.subset.compose(dst_subset)
+                        src_subset = full_memlet.subset
                         mem = mm.Memlet(data=outer_edge.data.data, subset=dst_subset, other_subset=src_subset)
                         graph.add_edge(node, edge.src_conn, outer_edge.dst, outer_edge.dst_conn, mem)
 
