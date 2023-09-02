@@ -4,7 +4,10 @@ import numpy as np
 import os
 import pytest
 import dace
-from dace.transformation.dataflow import PruneConnectors
+
+from dace.sdfg.state import StateSubgraphView
+from dace.transformation.dataflow import PruneConnectors, AugAssignToWCR
+from dace.transformation import helpers
 
 
 def make_sdfg():
@@ -237,6 +240,83 @@ def test_unused_retval_2():
     assert np.allclose(a, 1)
 
 
+def test_prune_connectors_in_scope():
+
+    @dace.program
+    def sdfg_prune_connectors_in_scope(A: dace.float64[32], B: dace.float64[32]):
+        for i in dace.map[0:32]:
+            with dace.tasklet(language=dace.Language.CPP):
+                a << A[i]
+                c << B[i]
+                b >> A[i]
+                """
+                b = min(c, a);
+                """
+
+    sdfg = sdfg_prune_connectors_in_scope.to_sdfg()
+    sdfg.simplify()
+
+    state = sdfg.start_state
+    map_entry = None
+    for node in state.nodes():
+        if isinstance(node, dace.nodes.MapEntry):
+            map_entry = node
+            break
+
+    map_exit = state.exit_node(map_entry)
+    subgraph = StateSubgraphView(state, set(state.all_nodes_between(map_entry, map_exit)))
+    helpers.nest_state_subgraph(sdfg, state, subgraph)
+
+    # WCR Conversion
+    applied = sdfg.apply_transformations_repeated(AugAssignToWCR)
+    assert applied == 1
+
+    applied = sdfg.apply_transformations_repeated(PruneConnectors)
+    assert applied == 1
+
+
+def test_prune_connectors_in_scope_dependency():
+
+    @dace.program
+    def sdfg_prune_connectors_in_scope_dependency(A: dace.float64[32], B: dace.float64[32]):
+        for j in dace.map[0:32]:
+            with dace.tasklet(language=dace.Language.CPP):
+                a >> A[j]
+                """
+                a = 0;
+                """
+        for i in dace.map[0:32]:
+            with dace.tasklet(language=dace.Language.CPP):
+                a << A[i]
+                c << B[i]
+                b >> A[i]
+                """
+                b = min(c, a);
+                """
+
+    sdfg = sdfg_prune_connectors_in_scope_dependency.to_sdfg()
+    sdfg.simplify()
+
+    state = sdfg.start_state
+    map_entry = None
+    for node in state.nodes():
+        if isinstance(node, dace.nodes.MapEntry) and str(node.map.params[0]) == "i":
+            map_entry = node
+            break
+
+    # Create NestedSDFG inside map
+    map_exit = state.exit_node(map_entry)
+    subgraph = StateSubgraphView(state, set(state.all_nodes_between(map_entry, map_exit)))
+    helpers.nest_state_subgraph(sdfg, state, subgraph)
+
+    # WCR Conversion: A is no input of NestedSDFG
+    applied = sdfg.apply_transformations_repeated(AugAssignToWCR)
+    assert applied == 1
+
+    applied = sdfg.apply_transformations_repeated(PruneConnectors)
+    assert applied == 0
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--N", default=64)
@@ -248,3 +328,5 @@ if __name__ == "__main__":
     test_prune_connectors(True, n=n)
     test_unused_retval()
     test_unused_retval_2()
+    test_prune_connectors_in_scope()
+    test_prune_connectors_in_scope_dependency()

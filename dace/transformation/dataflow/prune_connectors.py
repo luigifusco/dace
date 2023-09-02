@@ -46,7 +46,10 @@ class PruneConnectors(pm.SingleStateTransformation):
         # Add WCR outputs to "do not prune" input list
         for e in graph.out_edges(nsdfg):
             if e.data.wcr is not None and e.src_conn in prune_in:
-                if (graph.in_degree(next(iter(graph.in_edges_by_connector(nsdfg, e.src_conn))).src) > 0):
+                # Find access node
+                in_edge = next(iter(graph.in_edges_by_connector(nsdfg, e.src_conn)))
+                access_node = graph.memlet_path(in_edge)[0].src
+                if graph.in_degree(access_node) > 0:
                     prune_in.remove(e.src_conn)
         has_before = all(
             graph.in_degree(graph.memlet_path(e)[0].src) > 0 for e in graph.in_edges(nsdfg) if e.dst_conn in prune_in)
@@ -73,7 +76,9 @@ class PruneConnectors(pm.SingleStateTransformation):
         # Add WCR outputs to "do not prune" input list
         for e in state.out_edges(nsdfg):
             if e.data.wcr is not None and e.src_conn in prune_in:
-                if (state.in_degree(next(iter(state.in_edges_by_connector(nsdfg, e.src_conn))).src) > 0):
+                in_edge = next(iter(state.in_edges_by_connector(nsdfg, e.src_conn)))
+                access_node = state.memlet_path(in_edge)[0].src
+                if state.in_degree(access_node) > 0:
                     prune_in.remove(e.src_conn)
         do_not_prune = set()
         for conn in prune_in:
