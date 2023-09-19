@@ -289,14 +289,19 @@ class OTFMapFusion(transformation.SingleStateTransformation):
                     for edge in graph.edges_between(first_map_entry, node):
                         memlet = copy.deepcopy(edge.data)
 
-                        in_connector = edge.src_conn.replace("OUT", "IN")
-                        if in_connector in connector_mapping:
-                            out_connector = connector_mapping[in_connector].replace("IN", "OUT")
-                        else:
-                            out_connector = edge.src_conn
 
-                        if out_connector not in self.second_map_entry.out_connectors:
-                            self.second_map_entry.add_out_connector(out_connector)
+                        in_connector = edge.src_conn
+                        if in_connector is not None:
+                            in_connector = in_connector.replace("OUT", "IN")
+                            if in_connector in connector_mapping:
+                                out_connector = connector_mapping[in_connector].replace("IN", "OUT")
+                            else:
+                                out_connector = edge.src_conn
+
+                            if out_connector not in self.second_map_entry.out_connectors:
+                                self.second_map_entry.add_out_connector(out_connector)
+                        else:
+                            out_connector = None
 
                         graph.add_edge(self.second_map_entry, out_connector, node, edge.dst_conn, memlet)
                         graph.remove_edge(edge)
