@@ -147,9 +147,9 @@ class OTFMapFusion(transformation.SingleStateTransformation):
 
         # Prepare: Preemptively rename params defined by second map in scope of first
         # This avoids that local variables (e.g., in nested SDFG) have collisions with new map scope
-        for param in self.second_map_entry.map.params:
-            new_param = param + "_local"
-            advanced_replace(subgraph, param, new_param)
+        # for param in self.second_map_entry.map.params:
+        #     new_param = param + "_local"
+        #     advanced_replace(subgraph, param, new_param)
 
         # Add local buffers for array-like OTFs
         for edge in graph.out_edges(self.second_map_entry):
