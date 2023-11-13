@@ -2782,7 +2782,7 @@ class SDFG(OrderedDiGraph[SDFGState, InterstateEdge]):
         
         map_entry.map.schedule = dace.ScheduleType.GPU_Device
 
-        return
+        #return
 
         # Avoiding import loops
         from dace.transformation.interstate import GPUTransformSDFGCloudSC
